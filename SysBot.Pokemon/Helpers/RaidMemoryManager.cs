@@ -150,4 +150,58 @@ public class RaidMemoryManager(ISwitchConnectionAsync connection, ulong raidBloc
             };
         }
     }
+
+    /// <summary>
+    /// Reads the IsActive flag for a raid at the specified index.
+    /// IsActive (IsEnabled) is at offset 0x00 within the raid structure.
+    /// DeterminePointer returns a pointer to the Seed (offset 0x10), so we subtract 0x10.
+    /// </summary>
+    /// <param name="index">The global raid index</param>
+    /// <param name="token">Cancellation token</param>
+    /// <returns>True if the raid is marked as active in memory</returns>
+    public async Task<bool> ReadIsActiveFlag(int index, CancellationToken token)
+    {
+        try
+        {
+            var ptr = DeterminePointer(index);
+            // IsActive is at offset 0x00, Seed is at offset 0x10, so IsActive = Seed - 0x10
+            ptr[3] -= 0x10;
+            // IsActive is a uint32 (4 bytes), value of 1 = active
+            byte[] data = await _connection.PointerPeek(4, ptr, token).ConfigureAwait(false);
+            return BitConverter.ToUInt32(data, 0) == 1;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Sets the IsActive flag for a raid at the specified index.
+    /// IsActive (IsEnabled) is at offset 0x00 within the raid structure.
+    /// DeterminePointer returns a pointer to the Seed (offset 0x10), so we subtract 0x10.
+    /// </summary>
+    /// <param name="index">The global raid index</param>
+    /// <param name="isActive">True to mark as active, false to mark as inactive</param>
+    /// <param name="token">Cancellation token</param>
+    /// <returns>True if the operation was successful</returns>
+    public async Task<bool> SetIsActiveFlag(int index, bool isActive, CancellationToken token)
+    {
+        try
+        {
+            var ptr = DeterminePointer(index);
+            // IsActive is at offset 0x00, Seed is at offset 0x10, so IsActive = Seed - 0x10
+            ptr[3] -= 0x10;
+            // IsActive is a uint32 (4 bytes), value of 1 = active, 0 = inactive
+            byte[] flagBytes = BitConverter.GetBytes(isActive ? 1u : 0u);
+            await _connection.PointerPoke(flagBytes, ptr, token).ConfigureAwait(false);
+
+            byte[] verification = await _connection.PointerPeek(4, ptr, token).ConfigureAwait(false);
+            return BitConverter.ToUInt32(verification, 0) == (isActive ? 1u : 0u);
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
