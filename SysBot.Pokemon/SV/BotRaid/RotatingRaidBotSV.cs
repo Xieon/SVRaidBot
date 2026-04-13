@@ -84,7 +84,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         private ulong _raidBlockPointerP;
         private ulong _raidBlockPointerK;
         private ulong _raidBlockPointerB;
-        private RaidMemoryManager _raidMemoryManager;
+        private RaidMemoryManager? _raidMemoryManager;
         private readonly ulong[] _teraNIDOffsets = new ulong[3];
         private string _teraRaidCode = string.Empty;
 
@@ -3253,7 +3253,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
 
             string disclaimer = _settings.ActiveRaids.Count > 1
-                                ? $"notpaldea.net"
+                                ? $"Xieon's Gaming Corner"
                                 : "";
 
             var turl = string.Empty;
@@ -3298,7 +3298,7 @@ namespace SysBot.Pokemon.SV.BotRaid
                 turl = RaidExtensions<PK9>.PokeImg(pk, false, false);
             }
             if (_settings.ActiveRaids[_currentRaidIndex].Species is 0)
-                turl = "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/combat.png";
+                turl = "https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/susspore_prepairingRaid.png?raw=true";
 
             // Fetch the dominant color from the image
             (int R, int G, int B) dominantColor = await RaidExtensions<PK9>.GetDominantColorAsync(turl).ConfigureAwait(false);
@@ -3354,7 +3354,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             // Only include footer if not posting 'upnext' embed with the 'Preparing Raid' title
             if (!(upnext && _settings.RaidSettings.TotalRaidsToHost == 0))
             {
-                string programIconUrl = $"https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/icon4.png";
+                string programIconUrl = "https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc.png?raw=true";
                 int raidsIn_currentRaidIndex = _hub.Config.RotatingRaidSV.ActiveRaids.Count(r => !r.AddedByRACommand);
 
                 // Calculate uptime
@@ -3560,7 +3560,7 @@ namespace SysBot.Pokemon.SV.BotRaid
             }
 
             // Send the embed to all channels and get list of sent messages
-            var sentMessages = await EchoUtil.RaidEmbed(imageBytes, fileName, embed);
+            var sentMessages = await EchoUtil.RaidEmbed(imageBytes ?? [], fileName, embed);
 
             // Only use reaction system if HideRaidCode is true
             bool isInitialCodedRaidAnnouncement =
@@ -3996,9 +3996,9 @@ ALwkMx63fBR0pKs+jJ8DcFrcJR50aVv1jfIAQpPIK5G6Dk/4hmV12Hdu5sSGLl40
                             Color = Color.Red,
                             ThumbnailUrl = "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/x.png"
                         };
-                        
+
                         //You should remove the await keyword since EchoUtil.RaidEmbed returns void, and replace null with an empty byte array to satisfy the non-nullable parameter.
-                        EchoUtil.RaidEmbed([], "", embed);
+                        _ = EchoUtil.RaidEmbed([], "", embed);
 
                         await Click(B, 0_500, token).ConfigureAwait(false);
                         await Click(B, 0_500, token).ConfigureAwait(false);

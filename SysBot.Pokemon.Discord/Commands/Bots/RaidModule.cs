@@ -23,8 +23,42 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
     [Summary("Generates and queues various silly trade additions")]
     public partial class RaidModule<T> : ModuleBase<SocketCommandContext> where T : PKM, new()
     {
-        private readonly PokeRaidHub<T> Hub = SysCord<T>.Runner.Hub;
+        private readonly PokeRaidHub<T> Hub = SysCord<T>.Runner?.Hub ?? throw new InvalidOperationException("SysCord Runner is not initialized.");
 
+
+        // =========================
+        // SPECIAL RAID MODEL
+        // =========================
+        public class SpecialRaidInfo
+        {
+            public string SeedHex { get; set; } = "";
+            public int Level { get; set; }
+            public int StoryProgress { get; set; } = 6;
+            public string? SpeciesName { get; set; }
+        }
+
+        // =========================
+        // SPECIAL RAID DICTIONARY
+        // =========================
+    public static readonly Dictionary<string, SpecialRaidInfo> SpecialRaids = new()
+    {
+        ["sp1"]  = new SpecialRaidInfo { SeedHex = "00080035", Level = 6, SpeciesName = "Dondozo" },
+        ["sp2"]  = new SpecialRaidInfo { SeedHex = "0054D585", Level = 6, SpeciesName = "Ditto" },
+        ["sp3"]  = new SpecialRaidInfo { SeedHex = "4A73A425", Level = 6, SpeciesName = "Ditto" },
+        ["sp4"]  = new SpecialRaidInfo { SeedHex = "AB5DF581", Level = 6, SpeciesName = "Ditto" },
+        ["sp5"]  = new SpecialRaidInfo { SeedHex = "24746421", Level = 6, SpeciesName = "Ditto" },
+        ["sp6"]  = new SpecialRaidInfo { SeedHex = "1F955A08", Level = 6, SpeciesName = "Blissey" },
+        ["sp7"]  = new SpecialRaidInfo { SeedHex = "77645A55", Level = 6, SpeciesName = "Torkoal" },
+        ["sp8"]  = new SpecialRaidInfo { SeedHex = "51BD1719", Level = 6, SpeciesName = "Vaporeon" },
+        ["sp9"]  = new SpecialRaidInfo { SeedHex = "444FC67F", Level = 6, SpeciesName = "Farigiraf" },
+        ["sp10"] = new SpecialRaidInfo { SeedHex = "B05D9CB1", Level = 3, SpeciesName = "Dunsparce" },
+        ["sp11"] = new SpecialRaidInfo { SeedHex = "0753AA79", Level = 6, SpeciesName = "Toxapex" },
+        ["sp12"] = new SpecialRaidInfo { SeedHex = "9C105481", Level = 6, SpeciesName = "KingGambit-FairyFarm" }
+    };
+
+        // =========================
+        // ORIGINAL RAIDINFO COMMAND (RESTORED)
+        // =========================
         [Command("raidinfo")]
         [Alias("ri", "rv")]
         [Summary("Displays basic Raid Info of the provided seed.")]
@@ -44,27 +78,29 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 await ReplyAsync("Invalid seed format. Please enter a valid seed.");
                 return;
             }
+
             if (level == 7 && storyProgressLevel == 6 && string.IsNullOrEmpty(speciesName))
             {
                 var availableSpecies = string.Join(", ", SpeciesToGroupIDMap.Keys);
                 await ReplyAsync($"For 7★ raids, please specify the species name. Available species: {availableSpecies}").ConfigureAwait(false);
                 return;
             }
-            // Check Compatibility of Difficulty and Story Progress Level
+
             var compatible = CheckProgressandLevel(level, storyProgressLevel);
             if (!compatible)
             {
                 string requiredProgress = GetRequiredProgress(level);
                 await ReplyAsync($"The selected raid difficulty level ({level}★) is not compatible with your current story progress. " +
-                                 $"To access {level}★ raids, you need to have at least {requiredProgress} in the game's story.").ConfigureAwait(false);
+                                $"To access {level}★ raids, you need to have at least {requiredProgress} in the game's story.").ConfigureAwait(false);
                 return;
             }
 
-            var settings = Hub.Config.RotatingRaidSV;  // Get RotatingRaidSV settings
+            var settings = Hub.Config.RotatingRaidSV;
 
             bool isEvent = !string.IsNullOrEmpty(speciesName);
 
-            var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry : (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
+            var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry :
+                            (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
 
             if (isEvent && selectedMap != TeraRaidMapParent.Paldea)
             {
@@ -73,16 +109,21 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             }
 
             int raidDeliveryGroupID = -1;
-            if (!string.IsNullOrEmpty(speciesName) && SpeciesToGroupIDMap.TryGetValue(speciesName, out var groupIDAndIndices))
+            // Only validate species for event raids
+            if (isEvent)
             {
-                var firstRaidGroupID = groupIDAndIndices.First().GroupID;
-                raidDeliveryGroupID = firstRaidGroupID;
+                if (SpeciesToGroupIDMap.TryGetValue(speciesName, out var groupIDAndIndices))
+                {
+                    var firstRaidGroupID = groupIDAndIndices.First().GroupID;
+                    raidDeliveryGroupID = firstRaidGroupID;
+                }
+                else
+                {
+                    await ReplyAsync("Species name not recognized or not associated with an active event. Please check the name and try again.");
+                    return;
+                }
             }
-            else if (!string.IsNullOrEmpty(speciesName))
-            {
-                await ReplyAsync("Species name not recognized or not associated with an active event. Please check the name and try again.");
-                return;
-            }
+
 
             var crystalType = level switch
             {
@@ -107,24 +148,30 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                     0,
                     isEvent,
                     (int)settings.EmbedToggles.EmbedLanguage);
+
                 var instructionMessage = await ReplyAsync("React with ✅ to add the raid to the queue.");
                 var message = await ReplyAsync(embed: embed);
+
                 var checkmarkEmoji = new Emoji("✅");
                 await message.AddReactionAsync(checkmarkEmoji);
 
-                SysCord<T>.ReactionService.AddReactionHandler(message.Id, async (reaction) =>
+                if (SysCord<T>.ReactionService != null)
                 {
-                    if (reaction.UserId == Context.User.Id && reaction.Emote.Name == checkmarkEmoji.Name)
+                    var reactionService = SysCord<T>.ReactionService;
+                    reactionService.AddReactionHandler(message.Id, async (reaction) =>
                     {
-                        await AddNewRaidParamNext(seedValue, level, storyProgressLevel, speciesName);
+                        if (reaction.UserId == Context.User.Id && reaction.Emote.Name == checkmarkEmoji.Name)
+                        {
+                            await AddNewRaidParamNext(seedValue, level, storyProgressLevel, null);
+                            reactionService.RemoveReactionHandler(reaction.MessageId);
+                        }
+                    });
+                }
 
-                        SysCord<T>.ReactionService.RemoveReactionHandler(reaction.MessageId);
-                    }
-                });
                 _ = Task.Run(async () =>
                 {
                     await Task.Delay(TimeSpan.FromMinutes(1));
-                    SysCord<T>.ReactionService.RemoveReactionHandler(message.Id);
+                    SysCord<T>.ReactionService?.RemoveReactionHandler(message.Id);
                     await message.DeleteAsync();
                     await instructionMessage.DeleteAsync();
                 });
@@ -133,6 +180,95 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
             {
                 await ReplyAsync(ex.Message);
             }
+
+            await Context.Message.DeleteAsync().ConfigureAwait(false);
+        }
+
+        // =========================
+        // NEW SPECIAL_RAIDS COMMAND (EVENT-FREE)
+        // =========================
+        [Command("special_raids")]
+        [Alias("sr", "spec_raid")]
+        [Summary("Loads a specialty raid using a shortcode like sp1, sp2, etc.")]
+        public async Task SpecialRaidsAsync(string code)
+        {
+            if (!SpecialRaids.TryGetValue(code.ToLower(), out var raid))
+            {
+                await ReplyAsync("Invalid special raid code. Use something like `sp1`, `sp2`, etc.");
+                return;
+            }
+
+            string seedValue = raid.SeedHex;
+            int level = raid.Level;
+            int storyProgressLevel = raid.StoryProgress;
+            string? speciesName = raid.SpeciesName;
+
+            uint seed;
+            try
+            {
+                seed = uint.Parse(seedValue, NumberStyles.AllowHexSpecifier);
+            }
+            catch
+            {
+                await ReplyAsync("Internal error: invalid seed format in special raid definition.");
+                return;
+            }
+
+            var crystalType = (TeraCrystalType)1; // Always 6★
+            int raidDeliveryGroupID = -1;         // Never an event
+
+            var selectedMap = IsBlueberry ? TeraRaidMapParent.Blueberry :
+                            (IsKitakami ? TeraRaidMapParent.Kitakami : TeraRaidMapParent.Paldea);
+
+            try
+            {
+                var settings = Hub.Config.RotatingRaidSV;
+                var rewardsToShow = settings.EmbedToggles.RewardsToShow;
+
+                var (_, embed) = RaidInfoCommand(
+                    seedValue,
+                    (int)crystalType,
+                    selectedMap,
+                    storyProgressLevel,
+                    raidDeliveryGroupID,
+                    rewardsToShow,
+                    settings.EmbedToggles.MoveTypeEmojis,
+                    settings.EmbedToggles.CustomTypeEmojis,
+                    0,
+                    false,
+                    (int)settings.EmbedToggles.EmbedLanguage);
+
+                var instructionMessage = await ReplyAsync("React with ✅ to add the raid to the queue.");
+                var message = await ReplyAsync(embed: embed);
+
+                var checkmarkEmoji = new Emoji("✅");
+                await message.AddReactionAsync(checkmarkEmoji);
+
+                if (SysCord<T>.ReactionService != null)
+                {
+                    SysCord<T>.ReactionService.AddReactionHandler(message.Id, async (reaction) =>
+                    {
+                        if (reaction.UserId == Context.User.Id && reaction.Emote.Name == checkmarkEmoji.Name)
+                        {
+                            await AddNewRaidParamNext(seedValue, level, storyProgressLevel, null);
+                            SysCord<T>.ReactionService.RemoveReactionHandler(reaction.MessageId);
+                        }
+                    });
+                }
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(1));
+                    SysCord<T>.ReactionService?.RemoveReactionHandler(message.Id);
+                    await message.DeleteAsync();
+                    await instructionMessage.DeleteAsync();
+                });
+            }
+            catch (Exception ex)
+            {
+                await ReplyAsync(ex.Message);
+            }
+
             await Context.Message.DeleteAsync().ConfigureAwait(false);
         }
 
