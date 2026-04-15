@@ -25,6 +25,7 @@ namespace SysBot.Pokemon.Discord
 
         public async Task ListUtil(SocketCommandContext ctx, string nameMsg, string entry)
         {
+            string XGC_Icon_Url = "https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc.png?raw=true";
             List<string> pageContent = ListUtilPrep(entry);
             bool canReact = ctx.Guild.CurrentUser.GetPermissions(ctx.Channel as IGuildChannel).AddReactions;
             var embed = new EmbedBuilder { Color = GetBorderColor(false) }.AddField(x =>

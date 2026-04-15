@@ -158,12 +158,12 @@ namespace SysBot.Pokemon.Discord
                 {
                     await _client.StartAsync();
                     _reconnectAttempts = 0;
-                    Log(new LogMessage(LogSeverity.Info, "Gateway", "Reconnected successfully"));
+                    _ = Log(new LogMessage(LogSeverity.Info, "Gateway", "Reconnected successfully"));
                 }
                 catch (Exception reconnectEx)
                 {
                     _reconnectAttempts++;
-                    Log(new LogMessage(LogSeverity.Error, "Gateway", $"Failed to reconnect: {reconnectEx.Message}"));
+                    _ = Log(new LogMessage(LogSeverity.Error, "Gateway", $"Failed to reconnect: {reconnectEx.Message}"));
                 }
             });
 
@@ -227,19 +227,19 @@ namespace SysBot.Pokemon.Discord
                             if (isActive)
                             {
                                 await message.AddReactionAsync(new Emoji("✅"));
-                                Log(new LogMessage(LogSeverity.Info, "RaidEmbed", $"Added green check reaction to message {messageId} in channel {channelId}"));
+                                _ = Log(new LogMessage(LogSeverity.Info, "RaidEmbed", $"Added green check reaction to message {messageId} in channel {channelId}"));
                             }
                             else
                             {
                                 await message.AddReactionAsync(new Emoji("🚫"));
-                                Log(new LogMessage(LogSeverity.Info, "RaidEmbed", $"Added red X reaction to message {messageId} in channel {channelId}"));
+                                _ = Log(new LogMessage(LogSeverity.Info, "RaidEmbed", $"Added red X reaction to message {messageId} in channel {channelId}"));
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log(new LogMessage(LogSeverity.Error, "RaidEmbed", $"Error updating reactions: {ex.Message}"));
+                    _ = Log(new LogMessage(LogSeverity.Error, "RaidEmbed", $"Error updating reactions: {ex.Message}"));
                 }
             };
 
@@ -338,6 +338,10 @@ namespace SysBot.Pokemon.Discord
                         embed.AddField("**__7★ Raid Mechanics__**", mechanics, false);
                     }
                 }
+.WithFooter(new EmbedFooterBuilder
+{
+    Text = "Here's your screenshot.",
+});
 
                 embed.WithFooter(new EmbedFooterBuilder()
                 {
@@ -360,12 +364,12 @@ namespace SysBot.Pokemon.Discord
                 catch (Exception ex)
                 {
                     // Just log but don't interrupt - removing the reaction is just for cleanliness
-                    Log(new LogMessage(LogSeverity.Warning, "RaidCode", $"Failed to remove reaction: {ex.Message}"));
+                    _ = Log(new LogMessage(LogSeverity.Warning, "RaidCode", $"Failed to remove reaction: {ex.Message}"));
                 }
             }
             catch (Exception ex)
             {
-                Log(new LogMessage(LogSeverity.Error, "RaidCode", $"Failed to send raid code DM: {ex.Message}"));
+                _ = Log(new LogMessage(LogSeverity.Error, "RaidCode", $"Failed to send raid code DM: {ex.Message}"));
             }
         }
 
@@ -466,15 +470,15 @@ namespace SysBot.Pokemon.Discord
             {
                 if (_client.ConnectionState == ConnectionState.Disconnected)
                 {
-                    Log(new LogMessage(LogSeverity.Warning, "Gateway", "Detected disconnected state, attempting to reconnect..."));
+                    _ = Log(new LogMessage(LogSeverity.Warning, "Gateway", "Detected disconnected state, attempting to reconnect..."));
                     try
                     {
                         await _client.StartAsync();
-                        Log(new LogMessage(LogSeverity.Info, "Gateway", "Reconnected successfully"));
+                        _ = Log(new LogMessage(LogSeverity.Info, "Gateway", "Reconnected successfully"));
                     }
                     catch (Exception ex)
                     {
-                        Log(new LogMessage(LogSeverity.Error, "Gateway", $"Failed to reconnect: {ex.Message}"));
+                        _ = Log(new LogMessage(LogSeverity.Error, "Gateway", $"Failed to reconnect: {ex.Message}"));
                     }
                 }
                 await Task.Delay(60000, token); // Check every minute

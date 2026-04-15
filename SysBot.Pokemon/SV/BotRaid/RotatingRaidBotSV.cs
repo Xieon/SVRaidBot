@@ -30,6 +30,7 @@ namespace SysBot.Pokemon.SV.BotRaid
     /// </summary>
     public class RotatingRaidBotSV(PokeBotState cfg, PokeRaidHub<PK9> hub) : PokeRoutineExecutor9SV(cfg)
     {
+        public static string SusSpore_Restart = "https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc/susspore_restartingBot.png?raw=true";
         private readonly PokeRaidHub<PK9> _hub = hub;
         private readonly RotatingRaidSettingsSV _settings = hub.Config.RotatingRaidSV;
         private RemoteControlAccessList RaiderBanList => _settings.RaiderBanList;
@@ -101,7 +102,7 @@ namespace SysBot.Pokemon.SV.BotRaid
         public static bool HasErrored { get; set; }
         private bool _isRecoveringFromReboot;
         private volatile bool _isPaused = false;
-
+        private string wigger_url = "https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc/WIGGLER.gif?raw=true";
         private int _consecutiveDenFailures = 0;
         private int _lastFailedDenIndex = -1;
 
@@ -1057,14 +1058,15 @@ namespace SysBot.Pokemon.SV.BotRaid
         /// </summary>
         private async Task PerformRebootAndReset(CancellationToken t)
         {
+            var wiggler = $"https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc/WIGGLER.gif?raw=true";
             var embed = new EmbedBuilder
             {
                 Title = "Bot Reset",
                 Description = "The bot encountered an issue and is currently resetting. Please stand by.",
                 Color = Color.Red,
-                ThumbnailUrl = "https://raw.githubusercontent.com/hexbyt3/sprites/main/imgs/x.png"
+                ThumbnailUrl = wiggler
             };
-            EchoUtil.RaidEmbed(null, "", embed);
+            await EchoUtil.RaidEmbed(Array.Empty<byte>(), "", embed).ConfigureAwait(false);
 
             await ReOpenGame(new PokeRaidHubConfig(), t).ConfigureAwait(false);
             await HardStop().ConfigureAwait(false);
@@ -1504,7 +1506,7 @@ namespace SysBot.Pokemon.SV.BotRaid
 
                 if (isWon)
                 {
-                    Log("Yay! We defeated the raid!");
+                    Log("LFG - Our Party has **DEFEATED** the raid boss!");
                     _winCount++;
                 }
                 else
@@ -1663,6 +1665,12 @@ namespace SysBot.Pokemon.SV.BotRaid
                 if (index == -1)
                 {
                     Log("Invalid den index. Cannot force activate.");
+                    return;
+                }
+
+                if (_raidMemoryManager   == null)
+                {
+                    Log("Raid memory manager not initialized. Cannot force activate den.");
                     return;
                 }
 
@@ -4613,7 +4621,7 @@ ALwkMx63fBR0pKs+jJ8DcFrcJR50aVv1jfIAQpPIK5G6Dk/4hmV12Hdu5sSGLl40
             if (pkm.Form != 0)
                 pkmform = $"-{pkm.Form}";
 
-            return $"https://raw.githubusercontent.com/zyro670/PokeTextures/main/Placeholder_Sprites/scaled_up_sprites/Shiny/AlternateArt/{pkm.Species}{pkmform}.png";
+            return $"https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc.png?raw=true";
         }
 
         /// <summary>
@@ -4996,6 +5004,18 @@ ALwkMx63fBR0pKs+jJ8DcFrcJR50aVv1jfIAQpPIK5G6Dk/4hmV12Hdu5sSGLl40
             var progress = storyProgressLevel;
             var raid_delivery_group_id = raidDeliveryGroupID;
             var encounter = raid.GetTeraEncounter(Container, raid.IsEvent ? 3 : progress, contentType == 3 ? 1 : raid_delivery_group_id);
+            
+            if (encounter == null)
+            {
+                var errorEmbed = new EmbedBuilder
+                {
+                    Title = "Error: Encounter Data Not Found",
+                    Description = "Could not generate encounter data for the specified raid parameters.",
+                    Color = Color.Red
+                };
+                return (new PK9(), errorEmbed.Build());
+            }
+            
             var reward = encounter.GetRewards(Container, raid, 0);
             var stars = raid.IsEvent ? encounter.Stars : raid.GetStarCount(raid.Difficulty, storyProgressLevel, raid.IsBlack);
             var teraType = raid.GetTeraType(encounter);
@@ -5091,7 +5111,7 @@ ALwkMx63fBR0pKs+jJ8DcFrcJR50aVv1jfIAQpPIK5G6Dk/4hmV12Hdu5sSGLl40
             var teraTypeLower = strings.Types[teraType].ToLower();
             var teraIconUrl = $"https://raw.githubusercontent.com/hexbyt3/sprites/main/teraicons/icon1/{teraTypeLower}.png";
             var disclaimer = $"Current Position: {queuePosition}";
-            var titlePrefix = raid.IsShiny ? "Shiny " : "";
+            var titlePrefix = raid.IsShiny ? "Shiny <:shiny:1401967997094068254> " : "";
             var formName = ShowdownParsing.GetStringFromForm(pk.Form, strings, pk.Species, pk.Context);
             var authorName = $"{stars} ★ {titlePrefix}{strings.Species[encounter.Species]}{(pk.Form != 0 ? $"-{formName}" : "")}{(isEvent ? " (Event Raid)" : "")}";
 

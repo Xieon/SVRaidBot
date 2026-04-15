@@ -405,11 +405,16 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
         [Command("repeek")]
         [Summary("Take and send a screenshot from the currently configured Switch.")]
         [RequireOwner]
-        public async Task RePeek()
-        {
+        public async Task RepeekAsync(){
             string ip = RaidModule<T>.GetBotIPFromJsonConfig(); // Fetch the IP from the config
             var source = new CancellationTokenSource();
             var token = source.Token;
+
+            if (SysCord<T>.Runner == null)
+            {
+                await ReplyAsync("Bot runner is not initialized.").ConfigureAwait(false);
+                return;
+            }
 
             var bot = SysCord<T>.Runner.GetBot(ip);
             if (bot == null)
@@ -452,9 +457,9 @@ namespace SysBot.Pokemon.Discord.Commands.Bots
                 var jsonData = File.ReadAllText(SVRaidBot.ConfigPath);
                 var config = JObject.Parse(jsonData);
 
-                // Access the IP address from the first bot in the Bots array
-                var ip = config["Bots"][0]["Connection"]["IP"].ToString();
-                return ip;
+                // Access the IP address from the first bot in the Bots array with null checks
+                var ip = config["Bots"]?[0]?["Connection"]?["IP"]?.ToString();
+                return ip ?? "192.168.1.1"; // Return IP or default if null
             }
             catch (Exception ex)
             {

@@ -33,12 +33,12 @@ public static class RPEmbed
         embed.WithFooter(footer =>
         {
             footer.Text = $"{username}'s Raid Battler";
+            footer.IconUrl = "https://github.com/Xieons-Gaming-Corner/public/blob/main/assets/xgc.png?raw=true";
         });
 
         embed.WithAuthor(auth =>
         {
-            auth.Name = "Pokémon Updated!";
-            auth.Url = "https://notpaldea.net";
+            auth.Name = "XGC has Updated the Pokémon Updted!";
         });
 
         return embed.Build();
